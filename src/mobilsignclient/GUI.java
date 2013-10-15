@@ -4,8 +4,10 @@
  */
 package mobilsignclient;
 
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.util.Arrays;
 import javax.swing.ImageIcon;
-import javax.swing.JFrame;
 
 /**
  *
@@ -19,7 +21,7 @@ public class GUI extends javax.swing.JFrame {
      */
     public GUI() {
         initComponents();
-        client = new MobilSignClient("192.168.1.6",2002, taConsole);
+        client = new MobilSignClient("localhost",2002, taConsole);
     }
 
     /**
@@ -135,7 +137,27 @@ public class GUI extends javax.swing.JFrame {
         QRWindow.setVisible(true);
         lblQR.setIcon(new ImageIcon(client.getQrCode(client.getMobileKey().getModulus()))); // nastavi QR kod na GUI 
         client.connectToServer();
-        client.sendMessageToServer("PAIR:"+client.getMobileKey().getModulus());
+        //TO-DO urobit hash a ten posielat (SHA)
+        try{
+            MessageDigest md = MessageDigest.getInstance("SHA-256");            
+            BigInteger bg = client.getMobileKey().getModulus();
+            byte[] bg_arr = bg.toByteArray();
+            md.update(bg_arr, 0, bg_arr.length);
+            byte[] bg_arr_sha = md.digest();
+            
+            
+            StringBuffer hexString = new StringBuffer();
+            for (int i=0;i<bg_arr_sha.length;i++) {
+                hexString.append(Integer.toHexString(0xFF & bg_arr_sha[i]));
+            }
+            //System.out.println(hexString);
+            //System.out.println(Arrays.toString(bg_arr_sha));
+            
+            client.sendMessageToServer("PAIR:"+hexString);            
+            
+        }
+        catch(Exception e){/*TO/DO*/}
+        //System.out.println(client.getMobileKey().getModulus());
     }//GEN-LAST:event_miGenerateQRActionPerformed
 
     private void btnSendActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSendActionPerformed
