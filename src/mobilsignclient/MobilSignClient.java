@@ -37,8 +37,8 @@ public class MobilSignClient {
     private int serverPort; // port na ktorom server pocuva
     private PrivateKey applicationKey; // kluc desktopovej aplikacie
     private RSAPublicKey mobileKey; // kluc aplikacie v mobile
-    //private Socket socket; // sokect na pripojenie na server
-    private SSLSocket socket; //ssl
+    private Socket socket; // sokect na pripojenie na server
+    //private SSLSocket socket; //ssl
     private JTextArea console; // consola z GUI, zaznamenava cinnost
 
     public MobilSignClient(String serverAddress, int serverPort, JTextArea console) {
@@ -86,8 +86,8 @@ public class MobilSignClient {
     public void connectToServer() {
         try {
             
-            SSLSocketFactory factory=(SSLSocketFactory) SSLSocketFactory.getDefault();
-            socket=(SSLSocket) factory.createSocket(serverAddress,serverPort);
+            //SSLSocketFactory factory=(SSLSocketFactory) SSLSocketFactory.getDefault();
+            socket= new Socket(serverAddress,serverPort);
             console.append("Connected to server " + serverAddress + ":" + serverPort + "\n"); // zaznam do konzoly
         } catch (IOException ioe) {
             System.err.println("Can not establish connection to " + serverAddress + ":" + serverPort + "\n" + ioe.getMessage());
