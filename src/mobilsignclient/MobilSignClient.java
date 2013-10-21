@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package mobilsignclient;
 
 import com.google.zxing.BarcodeFormat;
@@ -37,8 +33,7 @@ public class MobilSignClient {
     private int serverPort; // port na ktorom server pocuva
     private PrivateKey applicationKey; // kluc desktopovej aplikacie
     private RSAPublicKey mobileKey; // kluc aplikacie v mobile
-    private Socket socket; // sokect na pripojenie na server
-    //private SSLSocket socket; //ssl
+    private SSLSocket socket; //ssl
     private JTextArea console; // consola z GUI, zaznamenava cinnost
 
     public MobilSignClient(String serverAddress, int serverPort, JTextArea console) {
@@ -67,27 +62,15 @@ public class MobilSignClient {
     /**
      * Pripoji sa na server
      */
-    public void connectToServerNoSSL() {
-     /*   try {
-            socket = new Socket(serverAddress, serverPort); // pripojenie
-            console.append("Connected to server " + serverAddress + ":" + serverPort + "\n"); // zaznam do konzoly
-        } catch (IOException ioe) {
-            System.err.println("Can not establish connection to " + serverAddress + ":" + serverPort + "\n" + ioe.getMessage());
-            ioe.printStackTrace(System.out);
-            System.exit(-1);
-        }
-        
-        receiveMsg(); // spusti sa prijimanie sprav, pokial boli vyslane*/
-    }
-    
-    /**
-     * Pripoji sa na server
-     */
     public void connectToServer() {
         try {
+            System.out.println("Client sa spusta");
+            System.setProperty("javax.net.ssl.trustStore","signKeyStore");
+            System.setProperty("javax.net.ssl.trustStorePassword","signproject123");
+            SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
             
-            //SSLSocketFactory factory=(SSLSocketFactory) SSLSocketFactory.getDefault();
-            socket= new Socket(serverAddress,serverPort);
+            socket = (SSLSocket) sslsocketfactory.createSocket(serverAddress, serverPort);            
+            
             console.append("Connected to server " + serverAddress + ":" + serverPort + "\n"); // zaznam do konzoly
         } catch (IOException ioe) {
             System.err.println("Can not establish connection to " + serverAddress + ":" + serverPort + "\n" + ioe.getMessage());
