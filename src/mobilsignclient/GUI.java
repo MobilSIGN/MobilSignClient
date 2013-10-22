@@ -139,27 +139,29 @@ public class GUI extends javax.swing.JFrame {
         client.connectToServer();
         //TO-DO urobit hash a ten posielat (SHA)
         try{
-            MessageDigest md = MessageDigest.getInstance("SHA-256");            
             BigInteger bg = client.getMobileKey().getModulus();
-            byte[] bg_arr = bg.toByteArray();
-            md.update(bg_arr, 0, bg_arr.length);
-            byte[] bg_arr_sha = md.digest();
+            String modulus = ""+bg;
+            MessageDigest md = MessageDigest.getInstance("SHA-1");
+            byte[] digest = md.digest(modulus.getBytes("UTF-8"));
+            String pair = new String(byteArrayToHexString(digest));
+            System.out.println(digest);
+            System.out.println(pair);
             
-            
-            StringBuffer hexString = new StringBuffer();
-            for (int i=0;i<bg_arr_sha.length;i++) {
-                hexString.append(Integer.toHexString(0xFF & bg_arr_sha[i]));
-            }
-            //System.out.println(hexString);
-            //System.out.println(Arrays.toString(bg_arr_sha));
-            
-            client.sendMessageToServer("PAIR:"+hexString);            
-            
+            client.sendMessageToServer("PAIR:"+pair);          
         }
         catch(Exception e){/*TO/DO*/}
         //System.out.println(client.getMobileKey().getModulus());
     }//GEN-LAST:event_miGenerateQRActionPerformed
 
+    public static String byteArrayToHexString(byte[] b) {
+        String result = "";
+        for (int i=0; i < b.length; i++) {
+            result +=
+            Integer.toString( ( b[i] & 0xff ) + 0x100, 16).substring( 1 );
+        }
+        return result;
+    }
+    
     private void btnSendActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSendActionPerformed
         // TODO add your handling code here:
         client.sendMessageToServer("SEND:"+tfSend.getText());
