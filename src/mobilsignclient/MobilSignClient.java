@@ -7,10 +7,17 @@ import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import communicator.Listener;
+import communicator.Sender;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+//import java.io.*;
 import java.math.BigInteger;
-import java.net.*;
+import java.net.UnknownHostException;
+//import java.net.*;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
@@ -34,13 +41,23 @@ public class MobilSignClient {
     private PrivateKey applicationKey; // kluc desktopovej aplikacie
     private RSAPublicKey mobileKey; // kluc aplikacie v mobile
     private SSLSocket socket; //ssl
+    //private Socket socket;
     private JTextArea console; // consola z GUI, zaznamenava cinnost
+    
+    private Sender clientSender;
+    private Listener clientListener;
+    
+    private String trustStore = "signKeyStore";
+    private String trustStorePassword = "signproject123";
 
     public MobilSignClient(String serverAddress, int serverPort, JTextArea console) {
         this.serverAddress = serverAddress;
         this.serverPort = serverPort;
         this.console = console;
         generateKeys();
+        
+        //pripoji sa na server
+        this.connectToServer();
     }
     
     /**
@@ -51,7 +68,18 @@ public class MobilSignClient {
         return applicationKey;
     }
     
-    /**
+    /**System.out.println("Client sa spusta");
+            System.setProperty("javax.net.ssl.trustStore",trustStore);
+            System.setProperty("javax.net.ssl.trustStorePassword",trustStorePassword);
+            SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();            
+            socket = (SSLSocket) sslsocketfactory.createSocket(serverAddress, serverPort);             
+            //socket = new Socket(serverAddress,serverPort);
+            console.append("Connected to server " + serverAddress + ":" + serverPort + "\n"); // zaznam do konzoly
+        } catch (IOException ioe) {
+            System.err.println("Can not establish connection to " + serverAddress + ":" + serverPort + "\n" + ioe.getMessage());
+            ioe.printStackTrace(System.out);
+            System.exit(-1);
+        }
      * Vrati kluc mobilu
      * @return kluc mobilu
      */
@@ -65,11 +93,18 @@ public class MobilSignClient {
     public void connectToServer() {
         try {
             System.out.println("Client sa spusta");
-            System.setProperty("javax.net.ssl.trustStore","signKeyStore");
-            System.setProperty("javax.net.ssl.trustStorePassword","signproject123");
-            SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+            System.setProperty("javax.net.ssl.trustStore",trustStore);
+            System.setProperty("javax.net.ssl.trustStorePassword",trustStorePassword);
+            SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();            
+            socket = (SSLSocket) sslsocketfactory.createSocket(serverAddress, serverPort);             
+            //socket = new Socket(serverAddress,serverPort);
             
-            socket = (SSLSocket) sslsocketfactory.createSocket(serverAddress, serverPort);            
+            //vytvorenie a spustenie listenera a sendera
+            this.clientSender = new Sender(socket);
+            this.clientListener = new Listener(socket);
+            this.clientListener.start();
+            this.clientSender.start();
+            
             
             console.append("Connected to server " + serverAddress + ":" + serverPort + "\n"); // zaznam do konzoly
         } catch (IOException ioe) {
@@ -88,49 +123,30 @@ public class MobilSignClient {
      */
     public void sendMessageToServer(String str) {
         final String str1 = str;
-
         new Thread(new Runnable() {
+            @Override
             public void run() {
-                PrintWriter out;
-                try {
-                    out = new PrintWriter(socket.getOutputStream());
-                    out.println(str1);
-                    out.flush();
-                } catch (UnknownHostException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                clientSender.sendMessage(str1);
             }
         }).start();
     }
 
     /**
      * Spusti vlakno prijimajuce spravy zo servera
+     * TODO
      */
-    public void receiveMsg() {
-
+    public synchronized void receiveMsg() {
         new Thread(new Runnable() {
-            public void run() {
-                BufferedReader in = null;
-                try {
-                    in = new BufferedReader(new InputStreamReader(
-                            socket.getInputStream()));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
+            @Override
+            public void run() {                
                 while (true) {
-                    String msg = null;
-                    try {
-                        msg = in.readLine(); 
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    if(clientListener.hasMessage()){
+                        displayMsg(clientListener.getMessage());                        
                     }
-                    if (msg == null) {
-                        break;
-                    } else {
-                        displayMsg(msg);
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(MobilSignClient.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
             }
@@ -143,9 +159,9 @@ public class MobilSignClient {
      * @param msg - neupravena sprava
      */
     public void displayMsg(String msg) {
-        if (msg.length() > 5 && msg.substring(0, 5).equals("SEND:")) {
+        if (msg.length() > 5 && msg.substring(0, 5).equals("SEND:")) { //niekto nieco posiela
             msg = "Message recieved: [" + msg.substring(5) + "]";
-        } else if (msg.length() > 5 && msg.substring(0, 5).equals("RESP:")) {
+        } else if (msg.length() > 5 && msg.substring(0, 5).equals("RESP:")) { //niekto odpoveda na nasu spravu
             if (msg.substring(5).equals("paired")) {
                 msg = "Response: [" + msg.substring(5) + "]";
             }
