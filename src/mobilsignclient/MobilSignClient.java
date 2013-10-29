@@ -7,16 +7,13 @@ import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import communicator.Crypto;
 import communicator.Listener;
 import communicator.Sender;
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 //import java.io.*;
 import java.math.BigInteger;
-import java.net.UnknownHostException;
 //import java.net.*;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -56,8 +53,18 @@ public class MobilSignClient {
         this.console = console;
         generateKeys();
         
+        // TESTOVANIE KODOVANIA A DEKODOVANIA RSA cez BASE 64
+//        Crypto c1 = new Crypto(applicationKey);
+//        Crypto c2 = new Crypto(mobileKey);
+//        String str = "Ahoj ako sa mas?";
+//        System.out.println(str);
+//        String str2 = c1.encrypt(str);
+//        System.out.println(str2);
+//        String str3 = c2.decrypt(str2);
+//        System.out.println(str3);
+        
         //pripoji sa na server
-        this.connectToServer();
+//        this.connectToServer();
     }
     
     /**
