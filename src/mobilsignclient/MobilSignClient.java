@@ -54,14 +54,14 @@ public class MobilSignClient {
         generateKeys();
         
         // TESTOVANIE KODOVANIA A DEKODOVANIA RSA cez BASE 64
-//        Crypto c1 = new Crypto(applicationKey);
-//        Crypto c2 = new Crypto(mobileKey);
-//        String str = "Ahoj ako sa mas?";
-//        System.out.println(str);
-//        String str2 = c1.encrypt(str);
-//        System.out.println(str2);
-//        String str3 = c2.decrypt(str2);
-//        System.out.println(str3);
+        Crypto c1 = new Crypto(applicationKey);
+        Crypto c2 = new Crypto(mobileKey);
+        String str = "Ahoj ako sa mas?";
+        System.out.println(str);
+        String str2 = c1.encrypt(str);
+        System.out.println(str2);
+        String str3 = c2.decrypt(str2);
+        System.out.println(str3);
         
         //pripoji sa na server
 //        this.connectToServer();
