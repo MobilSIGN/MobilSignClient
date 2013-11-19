@@ -152,8 +152,9 @@ public class GUI extends javax.swing.JFrame {
             byte[] digest = md.digest(modulus.getBytes("UTF-8"));
             String pair = byteArrayToHexString(digest);
             System.out.println(digest);
-            System.out.println(pair);
+            System.out.println("PAIR:" + pair);
             
+            client.connectToServer();
             client.sendMessageToServer("PAIR:"+pair);          
         }
         catch(NoSuchAlgorithmException | UnsupportedEncodingException e){/*TO/DO*/}

@@ -133,6 +133,9 @@ public class MobilSignClient {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                if (clientSender == null) {
+                    System.out.println("Sprava je null");
+                }
                 clientSender.sendMessage(str1);
             }
         }).start();
