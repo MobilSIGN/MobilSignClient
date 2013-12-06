@@ -168,7 +168,9 @@ public class MobilSignClient {
      */
     public void displayMsg(String msg) {
         if (msg.length() > 5 && msg.substring(0, 5).equals("SEND:")) { //niekto nieco posiela
-            String text = crypto.decrypt(msg.substring(5));
+            byte[] data = Base64.decodeBase64(msg.substring(5));
+            byte[] decrypted = Crypto.decrypt(data, applicationKey);
+            String text = new String(decrypted);
             msg = "Message recieved: [" + text + "]";
         } else if (msg.length() > 5 && msg.substring(0, 5).equals("RESP:")) { //niekto odpoveda na nasu spravu
             if (msg.substring(5).equals("paired")) {
