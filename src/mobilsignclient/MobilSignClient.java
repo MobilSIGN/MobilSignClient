@@ -16,6 +16,8 @@ import java.math.BigInteger;
 import java.net.Socket;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.interfaces.RSAPublicKey;
@@ -23,6 +25,7 @@ import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JTextArea;
+import org.apache.commons.codec.binary.Base64;
 
 public class MobilSignClient {
 
@@ -95,7 +98,7 @@ public class MobilSignClient {
      *
      * @param str - odosielana sprava
      */
-    public void sendMessageToServer(String str) {
+    private void sendMessageToServer(String str) {
         final String str1 = str;
         new Thread(new Runnable() {
             @Override
@@ -106,6 +109,34 @@ public class MobilSignClient {
                 clientSender.sendMessage(str1);
             }
         }).start();
+    }
+    
+    /**
+     * Odosle zasifrovanu spravu.
+     */
+    public void sendMessage(String message) {
+        
+        this.sendMessageToServer("SEND:" + Base64.encodeBase64String(Crypto.encrypt(message.getBytes(), applicationKey)));
+    }
+    
+    /**
+     * Odosle parovaci request na server.
+     */
+    public void pairRequest() {
+        try {
+            BigInteger modulus = this.getMobileKey().getModulus();
+
+            MessageDigest md = MessageDigest.getInstance("SHA1");
+            md.update(modulus.toByteArray());
+            String sha1 = new BigInteger(1, md.digest()).toString(16);
+           
+            System.out.println("PAIR:" + sha1);
+            
+            this.connectToServer();
+            this.sendMessageToServer("PAIR:" + sha1);
+        } catch (NoSuchAlgorithmException ex) {
+            Logger.getLogger(MobilSignClient.class.getName()).log(Level.SEVERE, null, ex);
+        }  
     }
 
     /**
@@ -163,8 +194,11 @@ public class MobilSignClient {
             hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L); // mnozstvo informacie pre opravu chyby
             //hints.put(EncodeHintType.PDF417_COMPACT, true);
             //hints.put(EncodeHintType.PDF417_COMPACTION, Compaction.NUMERIC);
+            
+            String base64 = Base64.encodeBase64String(data.toByteArray());
+            System.out.println("Base64: " + base64);
 
-            BitMatrix bitMatrix = writer.encode(data + "", BarcodeFormat.QR_CODE, 750, 750, hints); // vytvori QR kod ako maticu bitov z bigintegera
+            BitMatrix bitMatrix = writer.encode(base64, BarcodeFormat.QR_CODE, 750, 750, hints); // vytvori QR kod ako maticu bitov z bigintegera
             BufferedImage qrImage = MatrixToImageWriter.toBufferedImage(bitMatrix); // prevedie QR kod matice bitov do obrazku
             return qrImage;
         } catch (WriterException ex) {
