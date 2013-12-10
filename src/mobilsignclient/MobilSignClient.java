@@ -173,8 +173,11 @@ public class MobilSignClient {
             String text = new String(decrypted).trim();
             msg = "Message recieved: [" + text + "]";
         } else if (msg.length() > 5 && msg.substring(0, 5).equals("RESP:")) { //niekto odpoveda na nasu spravu
-            if (msg.substring(5).equals("paired")) {
-                msg = "Response: [" + msg.substring(5) + "]";
+            String response = msg.substring(5);
+            switch (response) {
+                case "paired": msg = "Response: [" + response + "]";
+                    break;
+                case "unpaired": msg = "Response: [" + response + "]";
             }
         } else {
             msg = "Unknown message: [" + msg + "]";
