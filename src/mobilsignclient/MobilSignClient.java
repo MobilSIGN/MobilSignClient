@@ -106,7 +106,7 @@ public class MobilSignClient {
                 if (clientSender == null) {
                     System.out.println("Sprava je null");
                 }
-                clientSender.sendMessage(str1);
+                clientSender.putMesssageToQueue(str1);
             }
         }).start();
     }
