@@ -1,3 +1,10 @@
+/**
+ * TODO - po nadviazani spojenia (ako doteraz) cakat spravu s novym verejnym
+ * klucom noveho klucoveho paru V2 P2 - (pridat nejaky status, aby sme vedeli ci
+ * klient je sparovany, ci ma nove kluce, ci je dokoncena autentifikacia) -
+ * pridat podmienky na ukoncenie spojenie v pripade utoku - pridat spravy do
+ * protokolu (nieco na vymenu klucov)
+ */
 package mobilsignclient;
 
 import com.google.zxing.BarcodeFormat;
@@ -10,15 +17,18 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import communicator.Crypto;
 import communicator.Listener;
 import communicator.Sender;
+import communicator.Util;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.Socket;
+import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
@@ -26,6 +36,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JTextArea;
 import org.apache.commons.codec.binary.Base64;
+import sun.security.rsa.RSAPublicKeyImpl;
 
 public class MobilSignClient {
 
@@ -110,15 +121,15 @@ public class MobilSignClient {
             }
         }).start();
     }
-    
+
     /**
      * Odosle zasifrovanu spravu.
      */
     public void sendMessage(String message) {
-        
-        this.sendMessageToServer("SEND:" + Base64.encodeBase64String(Crypto.encrypt(message.getBytes(), applicationKey)));
+
+        this.sendMessageToServer("SEND:" + crypto.encrypt(message));
     }
-    
+
     /**
      * Odosle parovaci request na server.
      */
@@ -129,14 +140,14 @@ public class MobilSignClient {
             MessageDigest md = MessageDigest.getInstance("SHA1");
             md.update(modulus.toByteArray());
             String sha1 = new BigInteger(1, md.digest()).toString(16);
-           
+
             System.out.println("PAIR:" + sha1);
-            
+
             this.connectToServer();
             this.sendMessageToServer("PAIR:" + sha1);
         } catch (NoSuchAlgorithmException ex) {
             Logger.getLogger(MobilSignClient.class.getName()).log(Level.SEVERE, null, ex);
-        }  
+        }
     }
 
     /**
@@ -148,7 +159,7 @@ public class MobilSignClient {
             public void run() {
                 while (true) {
                     if (clientListener.hasMessage()) {
-                        displayMsg(clientListener.getMessage());
+                        processMsg(clientListener.getMessage());
                     }
                     try {
                         Thread.sleep(100);
@@ -162,27 +173,60 @@ public class MobilSignClient {
     }
 
     /**
-     * Zobrazi spravu upravenu na spravny format
+     * Spracuje spravu a rozhodne co dalej
      *
-     * @param msg - neupravena sprava
+     * @param msg
      */
-    public void displayMsg(String msg) {
-        if (msg.length() > 5 && msg.substring(0, 5).equals("SEND:")) { //niekto nieco posiela
-            byte[] data = Base64.decodeBase64(msg.substring(5));
-            byte[] decrypted = Crypto.decrypt(data, applicationKey);
-            String text = new String(decrypted).trim();
-            msg = "Message recieved: [" + text + "]";
-        } else if (msg.length() > 5 && msg.substring(0, 5).equals("RESP:")) { //niekto odpoveda na nasu spravu
-            String response = msg.substring(5);
-            switch (response) {
-                case "paired": msg = "Response: [" + response + "]";
-                    break;
-                case "unpaired": msg = "Response: [" + response + "]";
-            }
-        } else {
-            msg = "Unknown message: [" + msg + "]";
+    public boolean processMsg(String msg) {
+        System.out.println("cela MSG: " + msg);
+        if (msg.length() < 5) {
+            System.err.println("Zly format spravy.");
+            return false;
+        }
+        /*byte[] data = Base64.decodeBase64(msg.substring(5));
+         byte[] decrypted = Crypto.decrypt(data, applicationKey);
+         msg = new String(decrypted).trim();*/
+        String typSpravy = msg.substring(0, 5);
+        String teloSpravy = "";
+        switch (typSpravy) {
+            case Util.TYPE_SEND:
+                teloSpravy = crypto.decrypt(msg.substring(5));
+                System.out.println("typ spravy: " + typSpravy);
+                System.out.println("telo spravy: " + teloSpravy);
+//                String text = new String(decrypted).trim();
+                msg = "Message recieved: [" + teloSpravy + "]";
+                break;
+            case Util.TYPE_PAIR:
+                break;
+            case Util.TYPE_RESP:
+                teloSpravy = msg.substring(5);
+                System.out.println("typ spravy: " + typSpravy);
+                System.out.println("telo spravy: " + teloSpravy);
+                switch (teloSpravy) {
+                    case "paired":
+                        msg = "Response: [" + teloSpravy + "]";
+                        break;
+                    case "unpaired":
+                        msg = "Response: [" + teloSpravy + "]";
+                        break;
+                    default:
+                        msg = "Unknown message: [" + msg + "]";
+                        break;
+                }
+                break;
+            case Util.TYPE_MPUB:
+                // Teraz zasifrujeme verejny kluc mobila sukromnym klucom PC a 
+                // verejnym klucom mobilu a posleme do mobilu
+//                String mobilePublicKey = Base64.encodeBase64String(Crypto.encrypt(response.getBytes(), applicationKey));
+//                Base64.encodeBase64String(Crypto.encrypt(mobilePublicKey.getBytes(), new RSAPublicKeyImpl(response.getBytes())));
+                // ulozit niekde
+                break;
+            default:
+                System.err.println("Zly format spravy 2.");
+                return false;
         }
         console.append(msg + "\n");
+        return true;
     }
 
     /**
@@ -199,9 +243,9 @@ public class MobilSignClient {
             hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L); // mnozstvo informacie pre opravu chyby
             //hints.put(EncodeHintType.PDF417_COMPACT, true);
             //hints.put(EncodeHintType.PDF417_COMPACTION, Compaction.NUMERIC);
-            
+
             String base64 = Base64.encodeBase64String(data.toByteArray());
-            System.out.println("Base64: " + base64);
+//            System.out.println("Base64: " + base64);
 
             BitMatrix bitMatrix = writer.encode(base64, BarcodeFormat.QR_CODE, 750, 750, hints); // vytvori QR kod ako maticu bitov z bigintegera
             BufferedImage qrImage = MatrixToImageWriter.toBufferedImage(bitMatrix); // prevedie QR kod matice bitov do obrazku
@@ -222,6 +266,37 @@ public class MobilSignClient {
             KeyPair keyRSA = generatorRSA.generateKeyPair(); // vygeneruje klucovi par
             this.applicationKey = keyRSA.getPrivate(); // kluc desktopovej aplikacie je sukromny kluc z klucoveho paru
             this.mobileKey = (RSAPublicKey) keyRSA.getPublic(); // vrati verejny kluc type RSAPublicKey, lebo z neho mozem dostat modulus 
+            System.out.println("mobile key: " + mobileKey.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        try {
+            KeyPairGenerator generatorRSA = KeyPairGenerator.getInstance("RSA"); // vytvori instanciu generatora RSA klucov
+            generatorRSA.initialize(2048, new SecureRandom()); // inicializuje generator 2048 bitovych RSA klucov
+            KeyPair keyRSA = generatorRSA.generateKeyPair(); // vygeneruje klucovi par
+            PrivateKey private1 = keyRSA.getPrivate(); // kluc desktopovej aplikacie je sukromny kluc z klucoveho paru
+            PublicKey public1 = (RSAPublicKey) keyRSA.getPublic(); // vrati verejny kluc type RSAPublicKey, lebo z neho mozem dostat modulus 
+
+            generatorRSA = KeyPairGenerator.getInstance("RSA"); // vytvori instanciu generatora RSA klucov
+            generatorRSA.initialize(2048, new SecureRandom()); // inicializuje generator 2048 bitovych RSA klucov
+            keyRSA = generatorRSA.generateKeyPair(); // vygeneruje klucovi par
+            PrivateKey private2 = keyRSA.getPrivate(); // kluc desktopovej aplikacie je sukromny kluc z klucoveho paru
+            PublicKey public2 = (RSAPublicKey) keyRSA.getPublic(); // vrati 
+
+
+            Crypto cryptoPrivate1 = new Crypto(private1);
+            Crypto cryptoPrivate2 = new Crypto(private2);
+            Crypto cryptoPublic1 = new Crypto(public1);
+            Crypto cryptoPublic2 = new Crypto(public2);
+
+
+            String text = "abcd";
+
+            System.out.println(cryptoPublic1.decrypt(cryptoPrivate1.encrypt(text)));
+
         } catch (Exception e) {
             e.printStackTrace();
         }
