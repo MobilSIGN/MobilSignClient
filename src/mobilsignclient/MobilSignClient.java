@@ -190,10 +190,7 @@ public class MobilSignClient {
         String teloSpravy = "";
         switch (typSpravy) {
             case Util.TYPE_SEND:
-                teloSpravy = crypto.decrypt(msg.substring(5));
-                System.out.println("typ spravy: " + typSpravy);
-                System.out.println("telo spravy: " + teloSpravy);
-//                String text = new String(decrypted).trim();
+                teloSpravy = crypto.decrypt(msg.substring(5)).trim();
                 msg = "Message recieved: [" + teloSpravy + "]";
                 break;
             case Util.TYPE_PAIR:
