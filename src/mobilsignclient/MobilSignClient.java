@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.security.Key;
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
@@ -31,6 +32,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.RSAPublicKeySpec;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -49,6 +51,7 @@ public class MobilSignClient {
     private Listener clientListener;
     private Socket socket;
     private Crypto crypto;
+    private boolean mKeysChanged;
 
     public MobilSignClient(String serverAddress, int serverPort, JTextArea console) {
         this.serverAddress = serverAddress;
@@ -56,6 +59,7 @@ public class MobilSignClient {
         this.console = console;
         generateKeys();
         crypto = new Crypto(applicationKey);
+        mKeysChanged = false;
     }
 
     public Crypto getCrypto() {
@@ -212,11 +216,23 @@ public class MobilSignClient {
                 }
                 break;
             case Util.TYPE_MPUB:
-                // Teraz zasifrujeme verejny kluc mobila sukromnym klucom PC a 
-                // verejnym klucom mobilu a posleme do mobilu
-//                String mobilePublicKey = Base64.encodeBase64String(Crypto.encrypt(response.getBytes(), applicationKey));
-//                Base64.encodeBase64String(Crypto.encrypt(mobilePublicKey.getBytes(), new RSAPublicKeyImpl(response.getBytes())));
-                // ulozit niekde
+                if (mKeysChanged == true) {
+                    System.err.println("Druhy mobil sa chce pripojit. Rusime.");
+                    return false;
+                }
+                teloSpravy = crypto.decrypt(msg.substring(5)).trim();
+                System.out.println("Dekryptovany MPUB modulus: " + teloSpravy);
+                // Teraz zasifrujeme verejny kluc mobila sukromnym klucom PC 
+                String modulusVerejnehoKlucaMobiluZasifrovanyPrvyKrat = crypto.encrypt(teloSpravy);
+                RSAPublicKey verejnyKlucMobilu = getKeyFromModulus(new BigInteger(teloSpravy));
+                // Teraz ho zasifrujeme verejnym klucom mobilu    
+                crypto.setKey(verejnyKlucMobilu);
+                String modulusVerejnehoKlucaMobiluZasifrovanyDruhyKrat = crypto.encrypt(modulusVerejnehoKlucaMobiluZasifrovanyPrvyKrat);
+                // Posleme ho do mobilu
+                sendMessageToServer(Util.TYPE_MPUB + modulusVerejnehoKlucaMobiluZasifrovanyDruhyKrat);
+                // ulozit niekde => mal by uz byt nastaveny v Crypte
+                msg = "MPUB request: " + msg;
+                mKeysChanged = true;
                 break;
             default:
                 System.err.println("Zly format spravy 2.");
@@ -224,6 +240,20 @@ public class MobilSignClient {
         }
         console.append(msg + "\n");
         return true;
+    }
+
+    private RSAPublicKey getKeyFromModulus(BigInteger pModulus) {
+        RSAPublicKey key = null;
+        try {
+            //BigInteger modulus = new BigInteger(pModulus + "", 16); // vyrobi BigInteger z exponenta 65537 
+            RSAPublicKeySpec spec = new RSAPublicKeySpec(pModulus, new BigInteger("65537"));
+            KeyFactory factory = KeyFactory.getInstance("RSA");
+            key = (RSAPublicKey) factory.generatePublic(spec);
+        } catch (Exception e) {
+            System.err.println("Chyba v metode getKeyFromModulus.");
+            e.printStackTrace();
+        }
+        return key;
     }
 
     /**
