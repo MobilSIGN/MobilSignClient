@@ -37,10 +37,13 @@ import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JTextArea;
+import jni.JNI;
+import jni.JNICommunicator;
+import jni.JNIResponder;
 import org.apache.commons.codec.binary.Base64;
 import sun.security.rsa.RSAPublicKeyImpl;
 
-public class MobilSignClient {
+public class MobilSignClient implements JNIResponder {
 
     private String serverAddress; // ip adresa servera
     private int serverPort; // port na ktorom server pocuva
@@ -52,6 +55,7 @@ public class MobilSignClient {
     private Socket socket;
     private Crypto crypto;
     private boolean mKeysChanged;
+    private JNICommunicator c_communicator;
 
     public MobilSignClient(String serverAddress, int serverPort, JTextArea console) {
         this.serverAddress = serverAddress;
@@ -60,6 +64,21 @@ public class MobilSignClient {
         generateKeys();
         crypto = new Crypto(applicationKey);
         mKeysChanged = false;
+
+
+        //je potrebne nacitat kniznicu v zavislosti od OS
+        if (Util.getOS() == Util.PCOperacnySystem.LINUX){
+            System.load("/home/jano/NetBeansProjects/MobilSignClient/jni/libjni.so");
+        } else if (Util.getOS() == Util.PCOperacnySystem.WINDOWS) {
+            System.err.println("Nepodporovana platforma");
+            System.exit(0);
+        } else {
+            System.err.println("Nepodporovana platforma");
+            System.exit(0);
+        }
+
+        this.c_communicator = new JNICommunicator(this);
+        this.c_communicator.startPrijimanieSprav();
     }
 
     public Crypto getCrypto() {
@@ -327,5 +346,12 @@ public class MobilSignClient {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void spracujSpravu(String sprava) {
+        System.out.println("Dosla sprava: " + sprava);
+
+        JNI.posliSpravu("ODPOVED Z JAVY");
     }
 }
