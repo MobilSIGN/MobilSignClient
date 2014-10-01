@@ -22,14 +22,12 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.Socket;
-import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.RSAPublicKeySpec;
@@ -41,7 +39,6 @@ import jni.JNI;
 import jni.JNICommunicator;
 import jni.JNIResponder;
 import org.apache.commons.codec.binary.Base64;
-import sun.security.rsa.RSAPublicKeyImpl;
 
 public class MobilSignClient implements JNIResponder {
 
@@ -228,8 +225,6 @@ public class MobilSignClient implements JNIResponder {
                 break;
             case Util.TYPE_RESP:
                 teloSpravy = msg.substring(5);
-                System.out.println("typ spravy: " + typSpravy);
-                System.out.println("telo spravy: " + teloSpravy);
                 switch (teloSpravy) {
                     case "paired":
                         msg = "Response: [" + teloSpravy + "]";
@@ -277,8 +272,7 @@ public class MobilSignClient implements JNIResponder {
             KeyFactory factory = KeyFactory.getInstance("RSA");
             key = (RSAPublicKey) factory.generatePublic(spec);
         } catch (Exception e) {
-            System.err.println("Chyba v metode getKeyFromModulus.");
-            e.printStackTrace();
+            System.err.println("Chyba v metode getKeyFromModulus.");            
         }
         return key;
     }
@@ -294,24 +288,21 @@ public class MobilSignClient implements JNIResponder {
             MultiFormatWriter writer = new MultiFormatWriter();
             HashMap<EncodeHintType, Object> hints = new HashMap<EncodeHintType, Object>(2); // pravidla QR kodu
             hints.put(EncodeHintType.CHARACTER_SET, "UTF-8"); // kodovanie QR kodu
-            hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L); // mnozstvo informacie pre opravu chyby
-            //hints.put(EncodeHintType.PDF417_COMPACT, true);
-            //hints.put(EncodeHintType.PDF417_COMPACTION, Compaction.NUMERIC);
+            hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L); // mnozstvo informacie pre opravu chyby            
 
             String base64 = Base64.encodeBase64String(data.toByteArray());
-//            System.out.println("Base64: " + base64);
 
             BitMatrix bitMatrix = writer.encode(base64, BarcodeFormat.QR_CODE, 750, 750, hints); // vytvori QR kod ako maticu bitov z bigintegera
             BufferedImage qrImage = MatrixToImageWriter.toBufferedImage(bitMatrix); // prevedie QR kod matice bitov do obrazku
             return qrImage;
         } catch (WriterException ex) {
-            Logger.getLogger(MobilSignClient.class.getName()).log(Level.SEVERE, null, ex);
+            System.err.println("Nastala chyba pri generovani QR kodu");
             return null;
         }
     }
 
     /**
-     * Vygeneruje RSA 2048 bitovi klucovi par
+     * Vygeneruje RSA 2048 bitovy klucovy par
      */
     private void generateKeys() {
         try {
@@ -319,46 +310,17 @@ public class MobilSignClient implements JNIResponder {
             generatorRSA.initialize(2048, new SecureRandom()); // inicializuje generator 2048 bitovych RSA klucov
             KeyPair keyRSA = generatorRSA.generateKeyPair(); // vygeneruje klucovi par
             this.applicationKey = keyRSA.getPrivate(); // kluc desktopovej aplikacie je sukromny kluc z klucoveho paru
-            this.mobileKey = (RSAPublicKey) keyRSA.getPublic(); // vrati verejny kluc type RSAPublicKey, lebo z neho mozem dostat modulus 
-            System.out.println("mobile key: " + mobileKey.toString());
+            this.mobileKey = (RSAPublicKey) keyRSA.getPublic(); // vrati verejny kluc type RSAPublicKey, lebo z neho mozem dostat modulus             
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public static void main(String[] args) {
-        try {
-            KeyPairGenerator generatorRSA = KeyPairGenerator.getInstance("RSA"); // vytvori instanciu generatora RSA klucov
-            generatorRSA.initialize(2048, new SecureRandom()); // inicializuje generator 2048 bitovych RSA klucov
-            KeyPair keyRSA = generatorRSA.generateKeyPair(); // vygeneruje klucovi par
-            PrivateKey private1 = keyRSA.getPrivate(); // kluc desktopovej aplikacie je sukromny kluc z klucoveho paru
-            PublicKey public1 = (RSAPublicKey) keyRSA.getPublic(); // vrati verejny kluc type RSAPublicKey, lebo z neho mozem dostat modulus 
-
-            generatorRSA = KeyPairGenerator.getInstance("RSA"); // vytvori instanciu generatora RSA klucov
-            generatorRSA.initialize(2048, new SecureRandom()); // inicializuje generator 2048 bitovych RSA klucov
-            keyRSA = generatorRSA.generateKeyPair(); // vygeneruje klucovi par
-            PrivateKey private2 = keyRSA.getPrivate(); // kluc desktopovej aplikacie je sukromny kluc z klucoveho paru
-            PublicKey public2 = (RSAPublicKey) keyRSA.getPublic(); // vrati 
-
-
-            Crypto cryptoPrivate1 = new Crypto(private1);
-            Crypto cryptoPrivate2 = new Crypto(private2);
-            Crypto cryptoPublic1 = new Crypto(public1);
-            Crypto cryptoPublic2 = new Crypto(public2);
-
-
-            String text = "abcd";
-
-            System.out.println(cryptoPublic1.decrypt(cryptoPrivate1.encrypt(text)));
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+ 
 
     @Override
     public void spracujSpravu(String sprava) {
-        System.out.println("Dosla sprava: " + sprava);
+        System.out.println("Dosla sprava z JNI: " + sprava);
 
         JNI.posliSpravu("ODPOVED Z JAVY");
     }
