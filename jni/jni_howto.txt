@@ -1,3 +1,10 @@
+LINUX   
 javah -jni jni.JNI
 gcc -fPIC -shared -I /usr/lib/jvm/java-6-openjdk-amd64/include/ -o libtestnative.so jni_JNI.c
+
+
+WINDOWS
+C:\Program Files\Java\jdk1.7.0_25\bin>javah -jni -classpath C:\Users\Jano\Documents\NetBeansProjects\MobilSignClient\build\classes jni.JNI
+
+tcc -I "C:\Program Files\Java\jdk1.7.0_25\include" -shared C:\Users\Jano\Documents\jniprojekt\jni_JNI.c
 

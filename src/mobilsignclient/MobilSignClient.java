@@ -68,15 +68,18 @@ public class MobilSignClient implements JNIResponder {
         //je potrebne nacitat kniznicu v zavislosti od OS
         if (os == Util.PCOperacnySystem.LINUX) {
             if (arch == Util.PCArchitektura.BIT64) {
-                System.load("/home/jano/NetBeansProjects/MobilSignClient/jni/libjni64.so");
+                System.load("/home/jano/NetBeansProjects/MobilSignClient/jni/jni_linux/libjni64.so");
 //                System.load("/home/peter/sources/projektSign/MobilSignClient/jni/libjni64.so");
             } else {
-                System.load("/home/jano/NetBeansProjects/MobilSignClient/jni/libjni32.so");
+                System.load("/home/jano/NetBeansProjects/MobilSignClient/jni/jni_linux/libjni32.so");
 //                System.load("/home/peter/sources/projektSign/MobilSignClient/jni/libjni32.so");
             }
         } else if (Util.getOS() == Util.PCOperacnySystem.WINDOWS) {
-            System.err.println("Nepodporovana platforma");
-            System.exit(0);
+            if (arch == Util.PCArchitektura.BIT64) {
+                System.load("C:/Users/Jano/Documents/NetBeansProjects/MobilSignClient/jni/jni_windows/libjni64.dll");
+            } else {
+                System.load("C:/Users/Jano/Documents/NetBeansProjects/MobilSignClient/jni/jni_windows/libjni32.dll");
+            }
         } else {
             System.err.println("Nepodporovana platforma");
             System.exit(0);
