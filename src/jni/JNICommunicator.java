@@ -10,18 +10,18 @@ package jni;
  */
 public class JNICommunicator {
     
-    private JNIResponder delegat; 
+    /*private JNIResponder delegat; 
     private Thread prijimacieVlanko;
     
     public JNICommunicator(JNIResponder delegat){
         this.delegat = delegat;
-    }
+    }*/
     
-    public void posliSpravu(String sprava){
+    /*public void posliSpravu(String sprava){
         JNI.posliSpravu(sprava);
-    }
+    }*/
     
-    public void startPrijimanieSprav() {
+    /*public void startPrijimanieSprav() {
         if(this.prijimacieVlanko != null){
             System.out.println("Vlanko uz bezi");
             return;
@@ -29,7 +29,7 @@ public class JNICommunicator {
         this.prijimacieVlanko = new Thread() {
             @Override
             public void run() {
-               while(true){
+               while(true){                   
                    String prijataSprava = JNI.dajSpravu();
                    delegat.spracujSpravu(prijataSprava);
                }
@@ -37,6 +37,6 @@ public class JNICommunicator {
         };
         this.prijimacieVlanko.start();
 
-    }
+    }*/
     
 }

@@ -10,6 +10,6 @@ package jni;
  */
 public interface JNIResponder {
     
-    public void spracujSpravu(String sprava);
+    //public void spracujSpravu(String sprava);
     
 }

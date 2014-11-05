@@ -10,9 +10,10 @@ package jni;
  */
 public class JNI {
 
-    public static native String dajSpravu();
+    
+    public static native void init();
+    public static native String process(String message);
 
-    public static native void posliSpravu(String sprava);
-
+    
   
 }

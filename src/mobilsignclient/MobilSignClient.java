@@ -68,10 +68,10 @@ public class MobilSignClient implements JNIResponder {
         //je potrebne nacitat kniznicu v zavislosti od OS
         if (os == Util.PCOperacnySystem.LINUX) {
             if (arch == Util.PCArchitektura.BIT64) {
-                System.load("/home/jano/NetBeansProjects/MobilSignClient/jni/jni_linux/libjni64.so");
+                System.load("/home/jano/NetBeansProjects/JNI_C/dist/Debug/GNU-Linux-x86/libJNI_C.so");
 //                System.load("/home/peter/sources/projektSign/MobilSignClient/jni/libjni64.so");
             } else {
-                System.load("/home/jano/NetBeansProjects/MobilSignClient/jni/jni_linux/libjni32.so");
+                System.load("/home/jano/NetBeansProjects/JNI_C/dist/Debug/GNU-Linux-x86/libJNI_C.so");
 //                System.load("/home/peter/sources/projektSign/MobilSignClient/jni/libjni32.so");
             }
         } else if (Util.getOS() == Util.PCOperacnySystem.WINDOWS) {
@@ -85,8 +85,37 @@ public class MobilSignClient implements JNIResponder {
             System.exit(0);
         }
 
-        this.c_communicator = new JNICommunicator(this);
-        this.c_communicator.startPrijimanieSprav();
+
+
+        //zacneme komunikovat s pkcs
+        new Thread(){
+            @Override
+            public void run(){
+                initKomunikaciaSPKCS();
+            }        
+        }.start();
+
+    }
+
+    private void initKomunikaciaSPKCS() {
+        //inicializujeme JNI kniznicu
+        JNI.init();
+
+        String spravaPrePKCS = "INIT Z JAVY";
+        while (true) {
+            String spravaZPKCS = JNI.process(spravaPrePKCS);
+            System.out.println("SPRAVA Z PKCS: " + spravaZPKCS);
+            spravaPrePKCS = this.spracujSpravuZPKCS(spravaZPKCS);
+        }
+
+        //spravaZPKCS = JNI.process("ODPOVED Z JAVY");    
+    }
+
+    private String spracujSpravuZPKCS(String spravaZPKCS) {
+        this.sendMessage(spravaZPKCS);
+        
+        //todo komunikacia s androidom - synchronna
+        return "TODO ODPOVED Z JAVY";
     }
 
     public Crypto getCrypto() {
@@ -275,7 +304,7 @@ public class MobilSignClient implements JNIResponder {
             KeyFactory factory = KeyFactory.getInstance("RSA");
             key = (RSAPublicKey) factory.generatePublic(spec);
         } catch (Exception e) {
-            System.err.println("Chyba v metode getKeyFromModulus.");            
+            System.err.println("Chyba v metode getKeyFromModulus.");
         }
         return key;
     }
@@ -317,14 +346,5 @@ public class MobilSignClient implements JNIResponder {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
- 
-
-    @Override
-    public void spracujSpravu(String sprava) {
-        System.out.println("Dosla sprava z JNI: " + sprava);
-
-        JNI.posliSpravu("ODPOVED Z JAVY");
     }
 }
